@@ -33,8 +33,16 @@ done
 
 [[ -n "$SPECKIT_VERSION" ]] || die "Missing --spec-kit-version (e.g. v0.8.7)"
 command -v python3 >/dev/null || die "python3 required"
-python3 -c "import yaml" 2>/dev/null || die "PyYAML required"
 command -v curl >/dev/null || die "curl required"
+
+# Pick a python invocation that has PyYAML available (system, or uv fallback).
+if python3 -c "import yaml" 2>/dev/null; then
+    PY_YAML=(python3)
+elif command -v uv >/dev/null 2>&1; then
+    PY_YAML=(uv run --with pyyaml --quiet -- python3)
+else
+    die "PyYAML required. Install via pip or install uv to enable the fallback."
+fi
 
 TMP=$(mktemp -d)
 trap "rm -rf $TMP" EXIT

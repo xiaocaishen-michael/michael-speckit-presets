@@ -31,7 +31,15 @@ done
 [[ -d "$TARGET_REPO/.specify/presets" ]] || { log "No installed presets at $TARGET_REPO"; exit 0; }
 
 command -v python3 >/dev/null || die "python3 required"
-python3 -c "import yaml" 2>/dev/null || die "PyYAML required"
+
+# Pick a python invocation that has PyYAML available (system, or uv fallback).
+if python3 -c "import yaml" 2>/dev/null; then
+    PY_YAML=(python3)
+elif command -v uv >/dev/null 2>&1; then
+    PY_YAML=(uv run --with pyyaml --quiet -- python3)
+else
+    die "PyYAML required. Install via pip or install uv to enable the fallback."
+fi
 
 REGISTRY="$TARGET_REPO/.specify/presets/.registry"
 [[ -f "$REGISTRY" ]] || die "Missing .registry at $REGISTRY"
@@ -63,7 +71,7 @@ for id in "${INSTALLED[@]}"; do
     fi
 
     # priority check
-    declared_prio=$(python3 -c "import yaml; print(yaml.safe_load(open('$src/preset.yml')).get('priority', 10))")
+    declared_prio=$("${PY_YAML[@]}" -c "import yaml; print(yaml.safe_load(open('$src/preset.yml')).get('priority', 10))")
     installed_prio=$(python3 -c "import json; print(json.load(open('$REGISTRY'))['presets']['$id'].get('priority'))")
     if [[ "$declared_prio" != "$installed_prio" ]]; then
         log "❌ $id priority mismatch: registry=$installed_prio canonical=$declared_prio"
