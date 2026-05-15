@@ -47,7 +47,19 @@ done
 [[ ${#PRESETS[@]} -gt 0 ]] || die "At least one --preset required"
 
 command -v python3 >/dev/null || die "python3 required"
-python3 -c "import yaml" 2>/dev/null || die "PyYAML required (pip install pyyaml)"
+
+# Pick a python invocation that has PyYAML available.
+# Prefer the system python3 if PyYAML is already installed (fast path);
+# otherwise fall back to `uv run --with pyyaml` (handles PEP 668-locked
+# distributions like Homebrew Python where pip install is blocked).
+if python3 -c "import yaml" 2>/dev/null; then
+    PY_YAML=(python3)
+elif command -v uv >/dev/null 2>&1; then
+    PY_YAML=(uv run --with pyyaml --quiet -- python3)
+    log "PyYAML not in system python; using 'uv run --with pyyaml' as fallback"
+else
+    die "PyYAML required. Either 'pip install pyyaml' (may need --user or --break-system-packages) or install uv (https://docs.astral.sh/uv/) to enable the fallback."
+fi
 
 PRESETS_DIR="$TARGET_REPO/.specify/presets"
 REGISTRY_FILE="$PRESETS_DIR/.registry"
@@ -97,7 +109,7 @@ install_one() {
 
     # priority + applies_to from preset.yml
     local prio
-    prio=$(python3 -c "import yaml,sys; print(yaml.safe_load(open('$src/preset.yml')).get('priority', 10))")
+    prio=$("${PY_YAML[@]}" -c "import yaml,sys; print(yaml.safe_load(open('$src/preset.yml')).get('priority', 10))")
 
     if [[ "$DRY_RUN" == true ]]; then
         log "  (dry-run) would install $id with priority=$prio"
@@ -160,7 +172,7 @@ PY
 merge_extensions_fragment() {
     local fragment="$1"
     [[ -f "$EXTENSIONS_FILE" ]] || echo "hooks: {}" > "$EXTENSIONS_FILE"
-    SPECKIT_TARGET="$EXTENSIONS_FILE" SPECKIT_FRAG="$fragment" python3 <<'PY'
+    SPECKIT_TARGET="$EXTENSIONS_FILE" SPECKIT_FRAG="$fragment" "${PY_YAML[@]}" <<'PY'
 import yaml, os, sys
 with open(os.environ["SPECKIT_TARGET"]) as f:
     tgt = yaml.safe_load(f) or {}
