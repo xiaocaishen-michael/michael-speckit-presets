@@ -10,6 +10,7 @@ Composable presets for [github/spec-kit](https://github.com/github/spec-kit) ≥
 | `user-journey-mermaid` | `spec-template` prepend → adds `## User Journey Diagram` (mermaid sequenceDiagram) placeholder to every new spec | spec canonical / meta repos |
 | `context7-injection` | `plan-template` + `tasks-template` prepend → instructs Claude to call `mcp__context7__query-docs` before drafting third-party library decisions / API usage | impl repos |
 | `multi-repo-link` | `after_specify` hook + `link-spec.sh` → auto-symlinks meta-canonical `spec.md` into sibling impl repos | meta repos (driver) |
+| `api-types-sync` | `after_implement` hook → if HTTP-layer task (`[Web]` / `[Contract]`) just completed, cross-cwd run sibling app `pnpm api:gen:dev` + typecheck (no auto-commit) | server back-end repo |
 
 Designed for a three-repo layout (`meta` driver + `server` back-end + `app` front-end). Each preset declares `applies_to: [meta]` / `[server, app]` / etc. — no abstract `impl` alias.
 
@@ -42,7 +43,8 @@ michael-speckit-presets/
 │   ├── task-closure/
 │   ├── user-journey-mermaid/
 │   ├── context7-injection/
-│   └── multi-repo-link/
+│   ├── multi-repo-link/
+│   └── api-types-sync/
 ├── scripts/
 │   ├── install.sh                       # install preset(s) into a target repo
 │   ├── verify.sh                        # check installed presets are in sync

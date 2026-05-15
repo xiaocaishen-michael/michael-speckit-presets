@@ -1,0 +1,27 @@
+id: api-types-sync
+version: 1.0.0
+description: |
+  After /speckit.implement on the server repo, auto-trigger the app's
+  /sync-api-types flow via a spec-kit after_implement hook. Detects HTTP-layer
+  changes ([Web] / [Contract] tasks marked done), probes local dev server,
+  cross-cwd jumps to sibling app repo, regenerates the typed client + runs
+  typecheck. Hook fails soft (`optional: true`) — agent漏跑由 sdd.md 文档兜底
+  (§ server impl 后的 app types 同步).
+
+  Hardcoded for the project three-repo sibling layout (meta / server / app);
+  app is assumed at META_ROOT/no-vain-years-app. Adapt the command's `APP_ROOT`
+  derivation for other layouts.
+
+  NOT a generator switch — the hook calls existing `pnpm api:gen:dev` in app;
+  the generator (openapi-generator-cli) stays unchanged.
+applies_to: [server]
+spec_kit_compat: ">=0.8.5,<0.10.0"
+priority: 12
+
+provides:
+  commands:
+    - file: commands/speckit-trigger-sync-types.md
+      target: .claude/commands/speckit-trigger-sync-types.md
+  extensions:
+    - file: extensions.yml.fragment
+      merge_into: .specify/extensions.yml
