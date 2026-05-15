@@ -1,0 +1,9 @@
+hooks:
+  after_specify:
+    - extension: link-spec-after-specify
+      command: speckit.link-spec
+      enabled: true
+      optional: false
+      prompt: Auto-link meta canonical spec.md to sibling impl repos?
+      description: Auto-link meta canonical spec.md to server / app impl repos
+      condition: null

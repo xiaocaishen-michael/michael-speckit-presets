@@ -1,0 +1,24 @@
+id: multi-repo-link
+version: 1.0.0
+description: |
+  Auto-symlink meta-canonical spec.md (+ user-journey.md) to sibling impl repos
+  via a spec-kit after_specify hook. The driver scripts use relative-path symlinks
+  for git tree + worktree portability.
+applies_to: [meta]
+spec_kit_compat: ">=0.8.5,<0.10.0"
+priority: 8
+
+provides:
+  commands:
+    - file: commands/speckit-link-spec.md
+      target: .claude/commands/speckit-link-spec.md
+  extensions:
+    - file: extensions.yml.fragment
+      merge_into: .specify/extensions.yml
+  scripts:
+    - file: scripts/link-spec.sh
+      target: scripts/link-spec.sh
+    - file: scripts/unlink-spec.sh
+      target: scripts/unlink-spec.sh
+    - file: scripts/link-all-specs.sh
+      target: scripts/link-all-specs.sh
