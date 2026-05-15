@@ -19,8 +19,14 @@ jobs:
       - name: Validate each preset.yml has required fields
         run: |
           set -e
+          shopt -s nullglob
           fail=0
-          for f in presets/*/preset.yml; do
+          files=(presets/*/preset.yml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "ℹ️  No preset.yml files yet — phase A bootstrap. Skipping schema lint."
+            exit 0
+          fi
+          for f in "${files[@]}"; do
             python3 - "$f" <<'PY' || fail=1
           import yaml, sys
           path = sys.argv[1]
