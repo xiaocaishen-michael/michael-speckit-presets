@@ -1,0 +1,80 @@
+name: Verify Presets
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  schema:
+    name: preset.yml schema lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validate each preset.yml has required fields
+        run: |
+          set -e
+          fail=0
+          for f in presets/*/preset.yml; do
+            python3 - "$f" <<'PY' || fail=1
+          import yaml, sys
+          path = sys.argv[1]
+          with open(path) as fh:
+              d = yaml.safe_load(fh)
+          required = ["id", "version", "description", "applies_to", "spec_kit_compat", "priority"]
+          missing = [k for k in required if k not in d]
+          if missing:
+              print(f"❌ {path}: missing keys: {missing}")
+              sys.exit(1)
+          # applies_to must contain only concrete repos
+          allowed_repos = {"meta", "server", "app"}
+          bad = [r for r in d["applies_to"] if r not in allowed_repos]
+          if bad:
+              print(f"❌ {path}: applies_to contains non-concrete repo names: {bad} (allowed: {sorted(allowed_repos)})")
+              sys.exit(1)
+          # priority must be int
+          if not isinstance(d["priority"], int):
+              print(f"❌ {path}: priority must be int, got {type(d['priority']).__name__}")
+              sys.exit(1)
+          print(f"✅ {path}")
+          PY
+          done
+          exit $fail
+
+  registry-template:
+    name: .registry-template JSON validity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -c "import json; data = json.load(open('.registry-template')); assert 'presets' in data; print('OK')"
+
+  install-dryrun:
+    name: install.sh dry-run on tmpfs target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Prepare mock spec-kit target
+        run: |
+          mkdir -p /tmp/mock-target/.specify
+          # echo "hooks: {}" > /tmp/mock-target/.specify/extensions.yml
+      - name: Dry-run install all presets
+        run: |
+          set -e
+          mapfile -t presets < <(find presets -maxdepth 1 -mindepth 1 -type d -printf '%f\n')
+          if [ ${#presets[@]} -eq 0 ]; then
+            echo "⚠️  No presets found yet — skipping install dry-run"
+            exit 0
+          fi
+          args=()
+          for p in "${presets[@]}"; do args+=(--preset "$p"); done
+          ./scripts/install.sh --repo /tmp/mock-target --dry-run "${args[@]}"
