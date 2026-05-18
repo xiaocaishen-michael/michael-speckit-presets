@@ -12,7 +12,7 @@ Composable presets for [github/spec-kit](https://github.com/github/spec-kit) ≥
 | `multi-repo-link` | `after_specify` hook + `link-spec.sh` → auto-symlinks meta-canonical `spec.md` into sibling impl repos | meta repos (driver) |
 | `api-types-sync` | `after_implement` hook → if HTTP-layer task (`[Web]` / `[Contract]`) just completed, cross-cwd run sibling app `pnpm api:gen:dev` + typecheck (no auto-commit) | server back-end repo |
 
-Designed for a three-repo layout (`meta` driver + `server` back-end + `app` front-end). Each preset declares `applies_to: [meta]` / `[server, app]` / etc. — no abstract `impl` alias.
+Designed for a three-repo layout (`meta` driver + `server` back-end + `app` front-end) or a single mono-repo (`mono`) where spec canonical and impl live in the same tree. Each preset declares `applies_to: [meta]` / `[server, app]` / `[meta, mono]` / etc. — concrete repo-type names only, no abstract `impl` alias.
 
 ## Quick start
 
