@@ -38,7 +38,7 @@ jobs:
               print(f"❌ {path}: missing keys: {missing}")
               sys.exit(1)
           # applies_to must contain only concrete repos
-          allowed_repos = {"meta", "server", "app"}
+          allowed_repos = {"meta", "server", "app", "mono"}
           bad = [r for r in d["applies_to"] if r not in allowed_repos]
           if bad:
               print(f"❌ {path}: applies_to contains non-concrete repo names: {bad} (allowed: {sorted(allowed_repos)})")
