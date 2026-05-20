@@ -6,16 +6,16 @@ Focus: **mono-repo spec-kit automated orchestration + execution**. Tracks spec-k
 
 ## Presets
 
-| Preset | Effect | Applies to |
-|---|---|---|
-| `mono-orchestrator-ready` | `spec-template` + `plan-template` + `tasks-template` `replace` → upgrade all three to orchestrator-friendly form (YAML frontmatter + JSON fenced blocks + HTML marker JSON, validated by Zod schemas in `scripts/orchestrator/`) | mono repo |
-| `task-closure` | `tasks-template` prepend + `after_implement` hook → `tasks.md` `[X]` state stays in sync with implementation commits | impl repos (back-end / front-end) |
-| `user-journey-mermaid` | `spec-template` prepend → adds `## User Journey Diagram` (mermaid sequenceDiagram) placeholder to every new spec | spec canonical / meta repos |
-| `context7-injection` | `plan-template` + `tasks-template` prepend → instructs Claude to call `mcp__context7__query-docs` before drafting third-party library decisions / API usage | impl repos |
+All presets are **mono-repo only** (`applies_to: [mono]`). Earlier `meta` / `server` / `app` repo-type targeting was retired together with the obsolete `multi-repo-link` and `api-types-sync` presets — this repo no longer supports a split meta / server / app workflow.
 
-Designed for a single mono-repo (`mono`) where spec canonical and impl live in the same tree, with continued support for impl repos (`server` / `app`) and spec canonical (`meta`) repos for non-orchestrator workflows. Each preset declares `applies_to: [meta]` / `[server, app]` / `[meta, mono]` / `[mono]` — concrete repo-type names only, no abstract `impl` alias.
+| Preset | Effect |
+|---|---|
+| `mono-orchestrator-ready` | `spec-template` + `plan-template` + `tasks-template` `replace` → upgrade all three to orchestrator-friendly form (YAML frontmatter + JSON fenced blocks + HTML marker JSON, validated by Zod schemas in `scripts/orchestrator/`) |
+| `task-closure` | `tasks-template` prepend + `after_implement` hook → `tasks.md` `[X]` state stays in sync with implementation commits |
+| `user-journey-mermaid` | `spec-template` prepend → adds `## User Journey Diagram` (mermaid sequenceDiagram) placeholder to every new spec |
+| `context7-injection` | `plan-template` + `tasks-template` prepend → instructs Claude to call `mcp__context7__query-docs` before drafting third-party library decisions / API usage |
 
-`mono-orchestrator-ready` is the lowest-priority preset (`4`) so it forms the base layer; the `prepend`-strategy presets (`context7-injection`, `user-journey-mermaid`, `task-closure`) compose on top.
+Composition order: `mono-orchestrator-ready` (priority `4`) forms the base layer; the `prepend`-strategy presets (`context7-injection` `5`, `user-journey-mermaid` `6`, `task-closure` `10`) compose on top.
 
 ## Quick start
 
@@ -50,8 +50,7 @@ michael-speckit-presets/
 ├── scripts/
 │   ├── install.sh                       # install preset(s) into a target repo
 │   ├── verify.sh                        # check installed presets are in sync
-│   ├── sync-upstream.sh                 # validate prepend layers vs new spec-kit version
-│   └── cleanup-task-closure-legacy.sh   # restore vanilla SKILL.md for repos with legacy C1-C4 fork
+│   └── sync-upstream.sh                 # validate prepend layers vs new spec-kit version
 ├── .registry-template                   # default priorities for installed presets
 └── .github/workflows/
     └── verify-presets.yml               # CI: schema lint + dry-run install

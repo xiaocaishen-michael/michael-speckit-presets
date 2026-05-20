@@ -72,32 +72,6 @@ mkdir -p "$PRESETS_DIR"
 PRESET_REPO_SHA=$(git -C "$PRESET_REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Pre-flight: legacy task-closure SKILL fork detection
-preflight_task_closure_legacy() {
-    local skill_path="$TARGET_REPO/.claude/skills/speckit-implement/SKILL.md"
-    [[ -f "$skill_path" ]] || return 0
-    if grep -q 'localCustomized:[[:space:]]*true' "$skill_path"; then
-        cat >&2 <<EOF
-
-⚠️  Detected legacy task-closure C1-C4 SKILL fork at:
-    $skill_path
-
-The task-closure preset uses spec-kit 0.8.7 native composition (templates +
-hooks + slash command) instead. Restore vanilla SKILL.md and remove fork
-artifacts first:
-
-    $PRESET_REPO_ROOT/scripts/cleanup-task-closure-legacy.sh --repo "$TARGET_REPO"
-
-Skipping preset install until legacy fork is cleaned up.
-EOF
-        exit 1
-    fi
-}
-
-for p in "${PRESETS[@]}"; do
-    [[ "$p" == "task-closure" ]] && preflight_task_closure_legacy
-done
-
 # install_one <preset_id>
 install_one() {
     local id="$1"
