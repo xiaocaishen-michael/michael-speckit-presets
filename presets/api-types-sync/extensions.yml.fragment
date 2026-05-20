@@ -1,9 +1,0 @@
-hooks:
-  after_implement:
-    - extension: trigger-sync-api-types
-      command: speckit.trigger-sync-types
-      enabled: true
-      optional: true
-      prompt: Trigger app /sync-api-types if HTTP layer changed?
-      description: After server impl, if any [Web]/[Contract] task is done, regenerate app typed client from dev server
-      condition: null

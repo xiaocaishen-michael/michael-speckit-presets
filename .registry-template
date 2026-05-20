@@ -3,7 +3,6 @@
     "mono-orchestrator-ready": { "priority": 4, "enabled": true },
     "context7-injection": { "priority": 5, "enabled": true },
     "user-journey-mermaid": { "priority": 6, "enabled": true },
-    "multi-repo-link": { "priority": 8, "enabled": true },
     "task-closure": { "priority": 10, "enabled": true }
   }
 }
