@@ -2,17 +2,22 @@
 
 Composable presets for [github/spec-kit](https://github.com/github/spec-kit) ≥ 0.8.5, built on its native composition system (`templates` / `commands` / `extensions.yml` hooks) — no SKILL fork.
 
+Focus: **mono-repo spec-kit automated orchestration + execution**. Tracks spec-kit upstream long-term and never forks spec-core.
+
 ## Presets
 
 | Preset | Effect | Applies to |
 |---|---|---|
+| `mono-orchestrator-ready` | `spec-template` + `plan-template` + `tasks-template` `replace` → upgrade all three to orchestrator-friendly form (YAML frontmatter + JSON fenced blocks + HTML marker JSON, validated by Zod schemas in `scripts/orchestrator/`) | mono repo |
 | `task-closure` | `tasks-template` prepend + `after_implement` hook → `tasks.md` `[X]` state stays in sync with implementation commits | impl repos (back-end / front-end) |
 | `user-journey-mermaid` | `spec-template` prepend → adds `## User Journey Diagram` (mermaid sequenceDiagram) placeholder to every new spec | spec canonical / meta repos |
 | `context7-injection` | `plan-template` + `tasks-template` prepend → instructs Claude to call `mcp__context7__query-docs` before drafting third-party library decisions / API usage | impl repos |
 | `multi-repo-link` | `after_specify` hook + `link-spec.sh` → auto-symlinks meta-canonical `spec.md` into sibling impl repos | meta repos (driver) |
 | `api-types-sync` | `after_implement` hook → if HTTP-layer task (`[Web]` / `[Contract]`) just completed, cross-cwd run sibling app `pnpm api:gen:dev` + typecheck (no auto-commit) | server back-end repo |
 
-Designed for a three-repo layout (`meta` driver + `server` back-end + `app` front-end) or a single mono-repo (`mono`) where spec canonical and impl live in the same tree. Each preset declares `applies_to: [meta]` / `[server, app]` / `[meta, mono]` / etc. — concrete repo-type names only, no abstract `impl` alias.
+Designed for a three-repo layout (`meta` driver + `server` back-end + `app` front-end) or a single mono-repo (`mono`) where spec canonical and impl live in the same tree. Each preset declares `applies_to: [meta]` / `[server, app]` / `[meta, mono]` / `[mono]` — concrete repo-type names only, no abstract `impl` alias.
+
+`mono-orchestrator-ready` is the lowest-priority preset (`4`) so it forms the base layer; the `prepend`-strategy presets (`context7-injection`, `user-journey-mermaid`, `task-closure`) compose on top.
 
 ## Quick start
 
@@ -40,6 +45,7 @@ git clone https://github.com/xiaocaishen-michael/michael-speckit-presets.git ~/D
 ```text
 michael-speckit-presets/
 ├── presets/
+│   ├── mono-orchestrator-ready/
 │   ├── task-closure/
 │   ├── user-journey-mermaid/
 │   ├── context7-injection/
