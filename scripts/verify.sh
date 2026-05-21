@@ -114,6 +114,59 @@ for id in "${INSTALLED[@]}"; do
         done
     fi
 
+    # schemas checksum (per-preset namespaced at .specify/schemas/<id>/)
+    if [[ -d "$src/schemas" ]]; then
+        for f in "$src/schemas"/*; do
+            [[ -f "$f" ]] || continue
+            rel=$(basename "$f")
+            tgt="$TARGET_REPO/.specify/schemas/$id/$rel"
+            if [[ ! -f "$tgt" ]]; then
+                log "❌ $id missing installed schema: $rel"
+                FAIL=$((FAIL+1))
+                continue
+            fi
+            if ! diff -q "$f" "$tgt" >/dev/null 2>&1; then
+                log "❌ $id schema drift: $rel"
+                FAIL=$((FAIL+1))
+            fi
+        done
+    fi
+
+    # scripts checksum (target/scripts/ is flat, all presets share this dir)
+    if [[ -d "$src/scripts" ]]; then
+        for f in "$src/scripts"/*; do
+            [[ -f "$f" ]] || continue
+            rel=$(basename "$f")
+            tgt="$TARGET_REPO/scripts/$rel"
+            if [[ ! -f "$tgt" ]]; then
+                log "❌ $id missing installed script: $rel"
+                FAIL=$((FAIL+1))
+                continue
+            fi
+            if ! diff -q "$f" "$tgt" >/dev/null 2>&1; then
+                log "❌ $id script drift: $rel"
+                FAIL=$((FAIL+1))
+            fi
+        done
+    fi
+
+    # lefthook fragment: <repo>/lefthook.preset-<id>.yml minus install header (3 lines)
+    if [[ -f "$src/lefthook.yml.fragment" ]]; then
+        tgt="$TARGET_REPO/lefthook.preset-$id.yml"
+        if [[ ! -f "$tgt" ]]; then
+            log "❌ $id missing lefthook.preset-$id.yml"
+            FAIL=$((FAIL+1))
+        else
+            tmp_cmp=$(mktemp)
+            tail -n +4 "$tgt" > "$tmp_cmp"
+            if ! diff -q "$src/lefthook.yml.fragment" "$tmp_cmp" >/dev/null 2>&1; then
+                log "❌ $id lefthook fragment drift (lefthook.preset-$id.yml body diverged from canonical)"
+                FAIL=$((FAIL+1))
+            fi
+            rm -f "$tmp_cmp"
+        fi
+    fi
+
     [[ $FAIL -eq 0 ]] && log "✅ $id ok"
 done
 

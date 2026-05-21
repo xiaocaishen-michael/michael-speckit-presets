@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    adr-frontmatter-check:
+      tags: adr governance
+      glob: "docs/adr/*.md"
+      # Why this hook (per adr-governance preset / mono ADR-0031):
+      #   ADR frontmatter is SSOT for ADR lifecycle (status / applies_to /
+      #   sunset_trigger) — enables programmatic filtering by orchestrator and
+      #   forces explicit sunset thinking. The script also cross-checks
+      #   adr_id ↔ filename NNNN.
+      # Mono root devDeps: zod, gray-matter, tsx.
+      run: pnpm tsx scripts/check-adr-frontmatters.ts {staged_files}
