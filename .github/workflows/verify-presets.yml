@@ -73,6 +73,9 @@ jobs:
         run: |
           mkdir -p /tmp/mock-target/.specify
           # echo "hooks: {}" > /tmp/mock-target/.specify/extensions.yml
+          # Pre-create lefthook.yml so install.sh edits extends: cleanly (else
+          # it bootstraps an empty file which is still valid).
+          touch /tmp/mock-target/lefthook.yml
       - name: Dry-run install all presets
         run: |
           set -e
