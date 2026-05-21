@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    spec-frontmatter-check:
+      tags: spec-kit
+      glob: "specs/*/spec.md"
+      # Why this hook (per mono-orchestrator-ready 0.2.0):
+      #   spec frontmatter is SSOT for module ownership, perf budgets,
+      #   web_compat, agent_friction observations. Zod schema enforces
+      #   conditional invariants (web_compat=stub → notes required, etc.).
+      # The script auto-skips if no spec.md is staged.
+      # Mono root devDeps: zod, gray-matter, tsx.
+      run: pnpm tsx scripts/check-spec-frontmatters.ts {staged_files}
