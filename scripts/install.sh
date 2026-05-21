@@ -162,9 +162,23 @@ PY
 # Strategy:
 #   1. Copy fragment to <repo>/lefthook.preset-<id>.yml verbatim (idempotent — overwrite)
 #   2. Ensure <repo>/lefthook.yml has `extends:` list containing "./lefthook.preset-<id>.yml"
-# Rationale: avoid round-tripping mono lefthook.yml through PyYAML (would strip
-# user's inline comments). Only first install touches lefthook.yml top (adding
-# extends key); subsequent installs no-op the YAML mutation if already in list.
+# Rationale: use LINE-BASED edit (not PyYAML round-trip) to preserve all user
+# comments, multi-line shell scripts (`run: |`), and block scalar formatting
+# in lefthook.yml. PyYAML round-trip mangles `run: |` blocks into escaped
+# single-line strings and strips all comments — unacceptable for hand-curated
+# lefthook configs.
+#
+# Supported shapes:
+#   - No `extends:` key       → prepend `extends:\n  - <entry>\n`
+#   - Block-style list:       → append `  - <entry>` after the last existing item
+#       extends:
+#         - ./a.yml
+#         - ./b.yml
+#
+# Unsupported shapes (script aborts with explicit instructions):
+#   - Inline flow-style list: `extends: [./a.yml]`
+#   - Scalar:                 `extends: ./a.yml`
+#   User must convert to block style first; the abort message explains how.
 install_lefthook_fragment() {
     local id="$1"
     local fragment="$2"
@@ -178,27 +192,74 @@ install_lefthook_fragment() {
     } > "$preset_file"
 
     [[ -f "$LEFTHOOK_FILE" ]] || echo "" > "$LEFTHOOK_FILE"
-    SPECKIT_LEFTHOOK="$LEFTHOOK_FILE" SPECKIT_PRESET_FILE="./lefthook.preset-$id.yml" "${PY_YAML[@]}" <<'PY'
-import yaml, os
+    SPECKIT_LEFTHOOK="$LEFTHOOK_FILE" SPECKIT_PRESET_FILE="./lefthook.preset-$id.yml" python3 <<'PY'
+import os, re, sys
+
 target = os.environ["SPECKIT_LEFTHOOK"]
 entry = os.environ["SPECKIT_PRESET_FILE"]
+
 with open(target) as f:
-    raw = f.read()
-data = yaml.safe_load(raw) if raw.strip() else {}
-data = data or {}
-extends = data.get("extends")
-if extends is None:
-    data["extends"] = [entry]
-elif isinstance(extends, str):
-    if extends != entry:
-        data["extends"] = [extends, entry]
-elif isinstance(extends, list):
-    if entry not in extends:
-        extends.append(entry)
+    lines = f.readlines()
+
+# Locate top-level `extends:` line (ignoring leading whitespace; matches start of doc only)
+extends_idx = None
+for i, line in enumerate(lines):
+    # only consider top-level keys: no indentation, ends with ':' or ': something'
+    m = re.match(r"^extends\s*:\s*(.*)$", line)
+    if m:
+        extends_idx = i
+        extends_inline = m.group(1).strip()
+        break
+
+if extends_idx is None:
+    # No extends key — prepend block-style
+    prefix = [f"extends:\n", f"  - {entry}\n"]
+    # blank separator if next existing content is non-blank
+    if lines and lines[0].strip() != "":
+        prefix.append("\n")
+    new_lines = prefix + lines
+elif extends_inline and not extends_inline.startswith("#"):
+    # `extends: <inline>` — unsupported shape, abort
+    sys.stderr.write(
+        f"❌ lefthook.yml has inline `extends: {extends_inline}` — not supported.\n"
+        f"   Convert to block style first:\n"
+        f"     extends:\n"
+        f"       - <existing-entry>\n"
+        f"       - {entry}\n"
+        f"   Then re-run install.sh.\n"
+    )
+    sys.exit(1)
 else:
-    raise SystemExit(f"lefthook.yml `extends:` has unexpected type: {type(extends).__name__}")
+    # Block-style extends — track the LAST real list-item line; blanks and
+    # comments are tolerated mid-scan but never extend the insertion point
+    # (otherwise we'd splice a new `- entry` past the end of the list and
+    # break YAML — the orphan item attaches to the wrong parent).
+    last_item_idx = extends_idx
+    found = False
+    for j in range(extends_idx + 1, len(lines)):
+        line = lines[j]
+        item_m = re.match(r"^\s+-\s*(.+?)\s*$", line)
+        if item_m:
+            item = item_m.group(1).strip().strip("'\"")
+            if item == entry:
+                found = True
+                break
+            last_item_idx = j
+            continue
+        if line.strip() == "" or line.lstrip().startswith("#"):
+            # blank / comment inside list block — keep scanning but do not
+            # advance last_item_idx
+            continue
+        # any other content (next top-level key or sibling) — end of extends
+        break
+
+    if found:
+        new_lines = lines  # idempotent: entry already present, no change
+    else:
+        new_lines = lines[: last_item_idx + 1] + [f"  - {entry}\n"] + lines[last_item_idx + 1 :]
+
 with open(target, "w") as f:
-    yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+    f.writelines(new_lines)
 PY
 }
 
