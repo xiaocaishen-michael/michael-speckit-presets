@@ -58,7 +58,8 @@ Single JSON block, language tag MUST be `json orchestrator_config`.
         "build": "pnpm nx build server",
         "test": "pnpm nx test server --watch=false",
         "lint": "pnpm nx lint server",
-        "typecheck": "pnpm nx run server:typecheck"
+        "typecheck": "pnpm nx run server:typecheck",
+        "smoke": "pnpm tsx scripts/ci/server-boot-smoke.ts"
       },
       "graphify_scope": "apps/server/src/modules/<module>/**/*"
     }
@@ -116,6 +117,31 @@ Single JSON block, language tag MUST be `json api_contracts`.
   ]
 }
 ```
+
+## Dependencies & Defensive Additions *(Cargo-cult 防火墙)*
+
+<!--
+Per ADR-0040 multi-layer test gate (P5 follow-up). Cargo-cult anti-pattern:
+AI agent (含人类) 倾向从泛 RN / NestJS 教程 copy-paste "防御性" polyfill /
+import / config 而不验证当前栈是否真需要 (PR #79 retro Pattern F 实证:
+review plan L185 要求 `react-native-get-random-values` polyfill, 事后
+fact-check 发现 expo-crypto 当前版本不需要, 纯 cargo-cult bundle 膨胀)。
+
+本表强制每个 plan 阶段填写: 引入的新依赖或防御性 import 必须有 fact-
+check 锚点 (官方 docs / GitHub issue / 源码位置)。无锚点的 cargo-cult 会
+在 spec-kit /implement 阶段被 reviewer 抓包, OR LLM 在 Ralph-loop 自审
+环节主动删除冗余引入。
+
+填写规则:
+- 真有新依赖 / polyfill / shamefully-hoist 等防御性配置 → 必须列 + 锚点 URL
+- 无新引入 → 填一行 `None | N/A | N/A` 作为 explicit no-op 声明
+- 锚点不能是 "我觉得需要" / "教程说要" — 必须可点击的 docs / source 位置
+-->
+
+| 引入的依赖 / Polyfill / Defensive Import | 目的 | Fact-check 锚点 |
+|---|---|---|
+| (例) react-native-get-random-values | Polyfill globalThis.crypto.getRandomValues 给 uuid v9+ | [Link to upstream Expo docs OR specific commit verifying need on current SDK] |
+| None | N/A | N/A |
 
 ## Constitution Check *(mandatory)*
 
@@ -196,6 +222,23 @@ Natural-language bullets. Orchestrator injects this section verbatim into
 each task's temp-prompt.md during /speckit-implement, so keep each bullet
 focused on a decision that an LLM coding agent needs to honor.
 -->
+
+### 🚨 Testing Invariants (AI 绝对禁令 — 严禁违背)
+
+<!--
+Per ADR-0040 multi-layer test gate strategy. These three invariants are the
+hard rules for any NestJS lifecycle test (Guard / Interceptor / Filter /
+Pipe / Repository). 违背任一条 → P3 阶段 lefthook anti-mock 正则会拦 commit.
+These bullets are injected verbatim into the orchestrator LLM prompt; do
+not soften the language — the LLM defaults to mock everything if not
+explicitly forbidden.
+-->
+
+- **NO LIFECYCLE MOCKING**: 对 `Guard` / `Interceptor` / `Filter` / `Pipe` / `Repository` 子类，**绝对禁止** `new MyGuard()` / `jest.mock('./my.guard')` 这类隔离单元测试。这些组件依赖 NestJS DI lifecycle 顺序 (Guards→Interceptors→Pipes→Filters)，mock 隔离 = 抹掉 PR-79 类 cascade bug 的唯一信号。
+- **MANDATORY INTEGRATION**: 必须用 `Test.createTestingModule({ imports: [<TheModule>] }).compile()` 装一个微型 DI 容器，让被测组件在真实 lifecycle 中触发。`createTestingModule` 之外的"测试" 视同未测试。
+- **EXHAUSTIVE BRANCHING**: spec.md `state_branches` 列出的每条分支，**必须**在 integration test 文件中有对应 `it()` 块。100% 路径覆盖 — 不允许漏 cold-boot / 路由根 `/` 等非 happy-path 状态（PR #79 实证 4 层 cascade 始于一个未列状态分支）。
+
+### General Architecture Notes
 
 - [Key design decision 1 — e.g., "Reuse AccountModule, add ProfileController + ProfileService"]
 - [Key design decision 2 — e.g., "Prisma schema already has the field; no migration needed (per ADR-0019)"]
