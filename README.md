@@ -4,6 +4,8 @@ Composable presets for [github/spec-kit](https://github.com/github/spec-kit) ≥
 
 Focus: **mono-repo spec-kit automated orchestration + execution**. Tracks spec-kit upstream long-term and never forks spec-core.
 
+> **Modifying any preset?** Read **[PRESET-MECHANISM.md](PRESET-MECHANISM.md)** first — it covers the spec-kit 4-tier resolver, the real semantics of `strategy: replace`, the install-vs-runtime division of labor, and the required round-trip workflow when changing vendored content in downstream repos. Skipping this doc is how silent drift happens (see § 5 of that file for the 2026-05-22 case study).
+
 ## Presets
 
 All presets are **mono-repo only** (`applies_to: [mono]`). Earlier `meta` / `server` / `app` repo-type targeting was retired together with the obsolete `multi-repo-link` and `api-types-sync` presets — this repo no longer supports a split meta / server / app workflow.
