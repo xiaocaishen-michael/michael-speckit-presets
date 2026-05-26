@@ -41,6 +41,24 @@
 
 `install.sh` **不**触碰 Priority 4 的 `.specify/templates/*`，**不**做物理替换。运行期由 resolver 选层。
 
+## 3.5 命令接 resolver 不对称：`specify` 是例外（重要）
+
+§1 的 resolver 只有命令**真去调它**才生效。spec-kit 各 slash command 接 resolver 的方式**不一致**：
+
+| 命令 | 取模板路径 | 命中层 |
+|---|---|---|
+| `/speckit-plan` | 命令 frontmatter `scripts:` → `setup-plan.sh` → `resolve_template` | 经 resolver（命中 P1-P4 最高层）|
+| `/speckit-tasks` | 命令 frontmatter `scripts:` → `setup-tasks.sh` → `resolve_template` | 经 resolver |
+| `/speckit-specify` | 命令 body **硬编码 `cp .specify/templates/spec-template.md`**，无 `scripts:` 键、不调 `create-new-feature.sh` | **永远 Priority 4 core / vanilla**，不经 resolver |
+
+即 `/speckit-specify` 的 spec 创建**绕过整个 resolver 栈** —— 任何 P1-P3 的 preset/extension `spec-template` 覆盖**对它静默无效**（但 `/speckit-plan`·`/speckit-tasks` 会照单全收）。
+
+**这是上游 spec-kit v0.8+ 的故意设计**：core `specify` 被做成 script-free（默认不自动建 git branch）。resolver-aware 的 spec 创建挪到了 opt-in 的 `scaffold` preset / `git` extension —— 它们提供一份带 `scripts: create-new-feature.sh` 的 **specify 命令覆盖**（`create-new-feature.sh` 本身 resolver-aware，会 `resolve_template "spec-template"`）。
+
+**推论**：想让 `/speckit-specify` 产出 preset 的 orchestrator-friendly spec（frontmatter + 机读 marker），**只改 preset 的 `spec-template` 没用** —— 必须**覆盖 specify 命令本身**（装 `scaffold` preset / `git` extension，或自建 command 覆盖）。否则它永远产 vanilla spec。
+
+> 实证：`no-vain-years-mono` 2026-05-26 —— 实跑 `resolve_template` 三模板全命中 P2、`create-new-feature.sh` 的 resolve+cp 产出带 frontmatter+us-meta，而 `cp .specify/templates/spec-template.md`（specify SKILL 字面）产出 vanilla 零 metadata；交叉核对 github/spec-kit `main` 的 `templates/commands/{specify,plan,tasks}.md` + `scripts/bash/{common,create-new-feature,setup-*}.sh`。
+
 ## 4. 修改 preset 内容的正确流程
 
 `mono-orchestrator-ready` 等 preset 一旦 install 进了下游仓（如 `no-vain-years-mono`），下游会有 `.specify/presets/<id>/` 下的 vendored 副本。**禁止直接改下游的 vendored 副本**——下次 install 会按本仓 main 内容静默覆盖，把直接改的内容擦掉。
