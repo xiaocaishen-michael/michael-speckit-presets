@@ -1,15 +1,19 @@
 id: mono-orchestrator-ready
-version: 0.6.0
+version: 0.7.0
 description: |
-  mono-repo spec-kit 自动编排 + 执行支持。把 spec / plan / tasks 三大 template
-  升级到 orchestrator-friendly 形态:
+  mono-repo spec-kit 治理 + impl 支持。把 spec / plan / tasks 三大 template
+  升级到 prose-only + 治理 frontmatter + impl guardrails 形态:
 
     - spec.md: 上游 prose-only (US heading / `- **FR**:` / `- **SC**:`)
-      + YAML frontmatter (跨文档级治理元数据)。orchestrator 改 prose 抽取 (0.6.0)
-    - plan.md: JSON fenced block (宏观架构 / 沙盒配置 / entities / API contracts)
-    - tasks.md: HTML 注释内塞 JSON marker (微观 DAG / per-task meta)
+      + YAML frontmatter (跨文档级治理元数据)
+    - plan.md: prose-only — Summary / Constitution Check / Phase 0 Research
+      Gates / Architecture Notes (含 🚨 Testing Invariants + ADR-0043 范式
+      banner + 🚨 Impl Guardrails)。数据模型真相源 = schema.prisma;API 真相源
+      = OpenAPI code-first (api-contract.md);plan 只写 prose 设计意图,不镜像 (0.7.0)
+    - tasks.md: 人读 `- [ ] T<N> [title] (FR/US trace)` 清单 + impl guardrails
+      指引注释。无 per-task 机器 marker (0.7.0)
     - Zod schema 校验契约 (.specify/schemas/mono-orchestrator-ready/spec.zod.ts
-      管 frontmatter 治理;orchestrator 自有 schema + parse-gate 管制品契约)
+      管 frontmatter 治理)
 
   0.2.0 增量 (post-A-002 retro):
     - spec frontmatter v2 字段: web_compat / agent_friction_observed
@@ -99,8 +103,24 @@ description: |
       跟上 0.2.2 模板) + parallel optional + verification 容空 files。钉死
       orchestrator-parse-gate (lefthook + CI),制品漂即红
 
-  配合 scripts/orchestrator/*.ts 使用。仅适用于 monorepo (nx workspaces),
-  因为 orchestrator 需要在单仓内同时调度 server / api-client / mobile 多 workspace。
+  0.7.0 增量 (SDD 自动化架构选型 — nuke orchestrator 机器结构,转主-子 agent A 架构
+  per docs/plans/2026-06/06-13-sdd-automation-architecture-selection.md Phase 0):
+    - plan-template: 删 `orchestrator_config` + `api_contracts` JSON fenced 块
+      (仅退役中的 orchestrator parser 消费)。数据模型 → schema.prisma (SoT);
+      API → OpenAPI code-first (api-contract.md);plan 只承载 prose 设计意图 +
+      治理门禁。Constitution Check JSON → prose gate checkbox。frontmatter 去
+      orchestrator_compat
+    - tasks-template: 删每 task 的 `task-meta` HTML JSON marker (微观 DAG /
+      workspace / deps / trace_* / verify_kind / files,仅 orchestrator 消费)。
+      改人读 `- [ ] T<N> [title] (FR/US trace)` 清单。保留 T003 runtime smoke
+      指引 + impl guardrails 指引注释。frontmatter 去 orchestrator_compat
+    - 保留不动: spec-template (已 prose-only) / schemas/spec.zod.ts /
+      check-spec-frontmatters.ts / lefthook.yml.fragment (spec-frontmatter-check)
+    - mono 侧配套 (同 Phase 0,非本 preset): 删 orchestrator-parse-gate
+      (lefthook + pr-validation.yml CI) — 它 enforce 的 orchestrator-shape 已不再
+      由模板产出。scripts/orchestrator/*.ts 本体退役走后续专门 PR
+
+  仅适用于 monorepo (nx workspaces)。
 
   NOT a SKILL fork — `.claude/skills/speckit-*/SKILL.md` 保持 vanilla;
   采用 spec-kit 0.8.7+ 原生 template `replace` 策略。

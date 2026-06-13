@@ -5,134 +5,31 @@ status: drafted
 created_at: [YYYY-MM-DD]
 updated_at: [YYYY-MM-DD]
 adr_refs: []
-orchestrator_compat: ">=0.1.0"
 context7_verified: []
 ---
 
 # Implementation Plan: [FEATURE]
 
 <!--
-Frontmatter contract (parsed by scripts/orchestrator/parsers/plan.ts):
+Frontmatter fields:
 - feature_id: must equal spec.md frontmatter feature_id
-- spec_ref: relative path to spec.md (orchestrator cross-loads)
+- spec_ref: relative path to spec.md
 - status: drafted → approved → superseded
 - adr_refs: list of ADR ids this plan depends on (e.g., ["0019", "0043"])
 - context7_verified: library names whose API surface was grounded via
   mcp__context7__query-docs during plan drafting (populated by
   context7-injection preset workflow)
 
-JSON fenced block contract (HARD requirement, validated by Zod):
-- orchestrator_config — workspaces + module_boundaries + entities + sandbox + tech_constraints
-- api_contracts        — endpoints + auth + request/response schemas
-- constitution_check   — passed boolean + violations array
-
-LLM JSON output failure → orchestrator triggers Ralph-loop to rewrite this file.
+This plan is PROSE-ONLY. The data model lives in schema.prisma (SoT); the API
+surface lives in @nestjs/swagger decorators → OpenAPI (code-first SoT, per
+docs/conventions/api-contract.md). Do NOT mirror either into this file — capture
+DESIGN INTENT + decisions in prose under Architecture Notes instead.
 -->
 
 ## Summary *(mandatory)*
 
 [1-2 sentences. Extract from spec.md: primary requirement + 1-line technical
-approach. Do NOT restate full FR list — orchestrator already loads spec.md.]
-
-## Orchestrator Config *(mandatory)*
-
-<!--
-Single JSON block, language tag MUST be `json orchestrator_config`.
-- workspaces[].id is referenced by tasks-meta.workspace
-- workspaces[].verify_commands keys must match tasks-meta.verify_kind values
-- workspaces[].graphify_scope is the default AST scope per workspace
-- module_boundaries enforces eslint-plugin-boundaries at module level (per ADR-0032 / ADR-0043; ADR-0020 superseded)
-- module_boundaries: a `_`-prefixed key (e.g. "_note") is a human annotation, ignored by the parser
-- entities — the data model (migrated from spec.md). api_contracts.response_schema_ref points at these E<n> ids.
-    · domain: optional owning business module (free-form label, NOT a DDD subdomain)
-    · relations.kind: "1:1" | "1:N" | "N:1" | "N:N"
-- sandbox.cwd_template uses {feature_id} and {task_id} placeholders
--->
-
-```json orchestrator_config
-{
-  "workspaces": [
-    {
-      "id": "server-app",
-      "nx_project": "server",
-      "cwd": "apps/server",
-      "lang": "typescript",
-      "module_path": "src/<module>",
-      "verify_commands": {
-        "build": "pnpm nx build server",
-        "test": "pnpm nx test server --watch=false",
-        "lint": "pnpm nx lint server",
-        "typecheck": "pnpm nx run server:typecheck",
-        "smoke": "pnpm tsx scripts/ci/server-boot-smoke.ts"
-      },
-      "graphify_scope": "apps/server/src/<module>/**/*"
-    }
-  ],
-  "module_boundaries": {
-    "server-app": {
-      "modules": ["<module>"],
-      "allowed_imports": ["@nestjs/*"],
-      "forbidden_imports": ["apps/mobile/**/*"]
-    }
-  },
-  "entities": [
-    {
-      "id": "E1",
-      "name": "[EntityName]",
-      "domain": "<module>",
-      "attrs": [
-        { "name": "id", "type": "string" }
-      ],
-      "relations": []
-    }
-  ],
-  "sandbox": {
-    "cwd_template": "/tmp/orchestrator-{feature_id}-{task_id}",
-    "cleanup_on_success": true,
-    "cleanup_on_failure": false
-  },
-  "tech_constraints": {
-    "versions": [
-      { "lib": "@nestjs/core", "version": "^11.0.0" }
-    ],
-    "perf_budget": [
-      { "metric": "<metric description>", "target": "< 50ms", "trace_sc": ["SC-001"] }
-    ],
-    "scale": { "users": 10000, "rps": 100 }
-  }
-}
-```
-
-## API Contracts *(mandatory)*
-
-<!--
-Single JSON block, language tag MUST be `json api_contracts`.
-- endpoints[].id is referenced by tasks-meta.trace_ep (impl/gen tasks)
-- endpoints[].response_schema_ref points to an entity id from orchestrator_config.entities
-  above — shapes: "E<n>" | "array(E<n>)" | "union(E<n>, E<m>, ...)"
-- auth values: "public" | "bearer" | "api_key"
-- request/response use JSON Schema subset (type, properties, required)
--->
-
-```json api_contracts
-{
-  "endpoints": [
-    {
-      "id": "EP1",
-      "method": "GET",
-      "path": "/v1/<resource>",
-      "auth": "bearer",
-      "request": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      },
-      "response_schema_ref": "E1",
-      "trace_fr": ["FR-001"]
-    }
-  ]
-}
-```
+approach. Do NOT restate full FR list — spec.md already carries them.]
 
 ## Dependencies & Defensive Additions *(Cargo-cult 防火墙)*
 
@@ -145,8 +42,7 @@ fact-check 发现 expo-crypto 当前版本不需要, 纯 cargo-cult bundle 膨�
 
 本表强制每个 plan 阶段填写: 引入的新依赖或防御性 import 必须有 fact-
 check 锚点 (官方 docs / GitHub issue / 源码位置)。无锚点的 cargo-cult 会
-在 spec-kit /implement 阶段被 reviewer 抓包, OR LLM 在 Ralph-loop 自审
-环节主动删除冗余引入。
+在 spec-kit /implement 阶段被 reviewer 抓包。
 
 填写规则:
 - 真有新依赖 / polyfill / shamefully-hoist 等防御性配置 → 必须列 + 锚点 URL
@@ -159,20 +55,16 @@ check 锚点 (官方 docs / GitHub issue / 源码位置)。无锚点的 cargo-cu
 | (例) react-native-get-random-values | Polyfill globalThis.crypto.getRandomValues 给 uuid v9+ | [Link to upstream Expo docs OR specific commit verifying need on current SDK] |
 | None | N/A | N/A |
 
-## Constitution Check *(mandatory)*
+## Constitution Check *(mandatory gate)*
 
 <!--
-Single JSON block, language tag MUST be `json constitution_check`.
-Populated by /speckit-plan after evaluating .specify/memory/constitution.md.
-If passed=false, fill the Complexity Tracking table below with justifications.
+Evaluate this plan against .specify/memory/constitution.md. Hard gate — the plan
+cannot advance to tasks until this passes. If a principle is violated, either
+revise the plan OR justify the violation in Complexity Tracking below. Check the
+box explicitly; an empty box blocks the next phase.
 -->
 
-```json constitution_check
-{
-  "passed": true,
-  "violations": []
-}
-```
+- [ ] **Passed** — plan honors all constitution principles, OR every violation is justified in the Complexity Tracking table below.
 
 ## Phase 0 Research Gates *(mandatory)*
 
@@ -234,9 +126,11 @@ If none → write "no impacted Open Questions" + the `rg` you ran to verify.
 ## Architecture Notes *(mandatory)*
 
 <!--
-Natural-language bullets. Orchestrator injects this section verbatim into
-each task's temp-prompt.md during /speckit-implement, so keep each bullet
-focused on a decision that an LLM coding agent needs to honor.
+Natural-language bullets. Injected into each implementing sub-agent's brief
+(per plan-anchor extraction), so keep each bullet focused on a decision an LLM
+coding agent needs to honor. This is also where the data model + API surface
+DESIGN INTENT belongs (prose, not a mirror table) — entities, ownership,
+append-only semantics, masking points, endpoint purpose, etc.
 -->
 
 ### 🚨 Testing Invariants (AI 绝对禁令 — 严禁违背)
@@ -245,7 +139,7 @@ focused on a decision that an LLM coding agent needs to honor.
 Per ADR-0040 multi-layer test gate strategy. These three invariants are the
 hard rules for any NestJS lifecycle test (Guard / Interceptor / Filter /
 Pipe). 违背任一条 → P3 阶段 lefthook anti-mock 正则会拦 commit.
-These bullets are injected verbatim into the orchestrator LLM prompt; do
+These bullets are injected verbatim into the implementing sub-agent prompt; do
 not soften the language — the LLM defaults to mock everything if not
 explicitly forbidden.
 -->
@@ -266,8 +160,8 @@ explicitly forbidden.
 ### 🚨 Impl Guardrails（并发 / 安全 / 前端 — 详版见 mono conventions）
 
 <!--
-Injected verbatim into the implement prompt (architectureNotesSection). 详版 +
-实证锚见 docs/conventions/{server,mobile}-impl-playbook.md（单源）。保持 fierce —
+Injected into the implementing sub-agent brief. 详版 + 实证锚见
+docs/conventions/{server,mobile}-impl-playbook.md（单源）。保持 fierce —
 LLM 默认走简单路径，机制不显式禁就踩。仅留本 feature 适用的条目。
 -->
 
@@ -275,7 +169,7 @@ LLM 默认走简单路径，机制不显式禁就踩。仅留本 feature 适用�
 - **安全**：失败分支**字节级一致折叠** + dummy-hash constant-time pad（反枚举）；码/token 比较 **HMAC constant-time**，**NEVER bcrypt** 新代码；PII **AES-GCM** + 唯一 hash 防占位 + 终态才解密+掩码。
 - **前端（mobile）**：表单 **RHF + zodResolver** 4 铁律（Controller≠register / 表单态≠副作用态 / isSubmitting 单源 / 错误+a11y）；port 走 **Strangler-Fig**（复用 `~/theme`+`~/ui`、Orval 函数式 hook 非 class、axios 不删）；mockup 走 Claude Design 2 段模板。→ `../../docs/conventions/mobile-impl-playbook.md`
 
-(Write any feature-specific architecture notes here — reuse decisions, schema state, masking points, etc.)
+(Write any feature-specific architecture notes here — data model design intent, API surface purpose, reuse decisions, schema state, masking points, etc.)
 
 ## Complexity Tracking
 
