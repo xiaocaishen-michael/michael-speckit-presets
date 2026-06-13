@@ -1,5 +1,5 @@
 id: mono-orchestrator-ready
-version: 0.7.0
+version: 0.7.1
 description: |
   mono-repo spec-kit 治理 + impl 支持。把 spec / plan / tasks 三大 template
   升级到 prose-only + 治理 frontmatter + impl guardrails 形态:
@@ -119,6 +119,12 @@ description: |
     - mono 侧配套 (同 Phase 0,非本 preset): 删 orchestrator-parse-gate
       (lefthook + pr-validation.yml CI) — 它 enforce 的 orchestrator-shape 已不再
       由模板产出。scripts/orchestrator/*.ts 本体退役走后续专门 PR
+
+  0.7.1 增量 (0.7.0 follow-up): spec-template 注释修 stale ref — 0.7.0 删了 plan
+  的 orchestrator_config/api_contracts + tasks 的 task-meta 后,spec-template 仍
+  指「数据模型住 plan.md orchestrator_config」「FR/SC trace 走 task-meta.trace_*」
+  即失真。改指 schema.prisma (数据) / OpenAPI (API) / task 标题 prose trace。其余
+  orchestrator 运行时泛指 (parsers/spec.ts 等) 不动,归 orchestrator 退役专门 PR。
 
   仅适用于 monorepo (nx workspaces)。
 

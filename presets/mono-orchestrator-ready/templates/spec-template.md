@@ -68,8 +68,8 @@ needs straight from prose — keep these shapes exact:
 - User Story:          ### User Story <n> — <title> (Priority: P<n>)
 - Functional Req:      - **FR-NNN**: <text>   (prose carries no priority → orchestrator defaults 'should')
 - Success Criterion:   - **SC-NNN**: <text>
-The data model (entities) lives in plan.md's orchestrator_config, NOT here — the
-api_contracts endpoints reference entities by E<n>, so both sit in the HOW artifact.
+The data model lives in schema.prisma (SoT) and the API surface in @nestjs/swagger
+decorators → OpenAPI (code-first SoT), NOT here — spec.md is prose requirements only.
 
 If the user-journey-mermaid preset is installed, a "## User Journey Diagram"
 section is prepended above this file. Do not duplicate it here.
@@ -116,9 +116,8 @@ marker needed.
 
 <!--
 One bullet per requirement, prose only: `- **FR-NNN**: <text>`. Tasks trace back
-to these ids via tasks.md task-meta.trace_fr (the orchestrator validates
-trace_fr ⊆ the FR ids parsed here). Prose carries no priority — the orchestrator
-defaults each FR to 'should'. The data model (entities) is in plan.md, not here.
+to these ids in their task-title prose (e.g. `(FR-001, US1)`). Prose carries no
+priority. The data model lives in schema.prisma, not here.
 -->
 
 - **FR-001**: System MUST [requirement]
@@ -129,7 +128,7 @@ defaults each FR to 'should'. The data model (entities) is in plan.md, not here.
 
 <!--
 One bullet per criterion, prose only: `- **SC-NNN**: <text>`. Tasks may trace to
-these ids via tasks.md task-meta.trace_sc (e.g. perf-IT tasks).
+these ids in their task-title prose (e.g. perf-IT tasks).
 -->
 
 - **SC-001**: [measurable success criterion — include the metric + target value]
